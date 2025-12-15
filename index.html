@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>HD kvíz</title>
+  <style>
+    :root{
+      --bg:#0b1220; --panel:#0f172a; --panel2:#111c33; --text:#e5e7eb; --muted:#94a3b8;
+      --border:rgba(148,163,184,.35); --accent:#6366f1; --good:#22c55e; --bad:#ef4444;
+      --btn:#111827; --btn2:#0b1220;
+    }
+    [data-theme="light"]{
+      --bg:#f4f7ff; --panel:#ffffff; --panel2:#f6f8ff; --text:#0f172a; --muted:#475569;
+      --border:rgba(2,6,23,.18); --accent:#4f46e5; --btn:#ffffff; --btn2:#f1f5ff;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text);}
+    .wrap{max-width:980px; margin:0 auto; padding:14px;}
+    .top{display:flex; gap:10px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;}
+    h1{margin:0; font-size:1.25rem;}
+    .sub{margin:2px 0 0; color:var(--muted); font-size:.92rem;}
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .card{background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--border); border-radius:14px; padding:12px;}
+    .settings{display:grid; grid-template-columns:1fr 1fr; gap:10px; min-width:320px}
+    @media (max-width:820px){ .settings{grid-template-columns:1fr} }
+    label{font-size:.82rem; color:var(--muted); display:block; margin-bottom:4px;}
+    input[type="number"], select{
+      width:100%; padding:9px 10px; border-radius:12px; border:1px solid var(--border);
+      background:var(--btn); color:var(--text); outline:none;
+    }
+    .toggle{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:9px 10px; border:1px solid var(--border); border-radius:12px; background:var(--btn);
+    }
+    .toggle .pill{display:flex; gap:6px;}
+    .pill button{
+      border:1px solid var(--border); background:var(--btn2); color:var(--text);
+      padding:7px 10px; border-radius:999px; cursor:pointer; font-size:.82rem;
+    }
+    .pill button.on{border-color:rgba(99,102,241,.9); box-shadow:0 0 0 2px rgba(99,102,241,.15) inset;}
+    .btn{
+      border:1px solid var(--border); background:var(--btn); color:var(--text);
+      padding:9px 12px; border-radius:999px; cursor:pointer; font-weight:600; font-size:.9rem;
+    }
+    .btn.primary{background:var(--accent); border-color:rgba(0,0,0,.0); color:white;}
+    .btn:disabled{opacity:.45; cursor:default}
+    .quiz{margin-top:12px}
+    .bar{display:flex; gap:10px; align-items:center; color:var(--muted); font-size:.85rem; margin-bottom:8px}
+    .bar .pwrap{flex:1; height:7px; border-radius:999px; background:rgba(99,102,241,.18); overflow:hidden; border:1px solid var(--border)}
+    .bar .p{height:100%; width:0%; background:linear-gradient(90deg,var(--good),#86efac); transition:width .12s ease}
+    .q{font-size:1.03rem; line-height:1.45; margin:0 0 10px;}
+    .opts{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+    @media (max-width:720px){ .opts{grid-template-columns:1fr} }
+    .opt{
+      border:1px solid var(--border); background:var(--btn); border-radius:12px; padding:10px 10px;
+      cursor:pointer; display:flex; gap:10px; align-items:flex-start;
+      transition:transform .06s ease, border-color .06s ease, box-shadow .06s ease;
+    }
+    .opt:hover{transform:translateY(-1px)}
+    .opt .L{min-width:18px; font-weight:800; color:rgba(99,102,241,.95)}
+    .opt.sel{border-color:rgba(99,102,241,.9); box-shadow:0 0 0 2px rgba(99,102,241,.16) inset}
+    .opt.ok{border-color:rgba(34,197,94,.85); box-shadow:0 0 0 2px rgba(34,197,94,.14) inset}
+    .opt.bad{border-color:rgba(239,68,68,.85); box-shadow:0 0 0 2px rgba(239,68,68,.14) inset}
+    .hint, .exp{
+      display:none; margin-top:10px; border:1px solid var(--border); border-radius:12px; padding:10px; background:var(--btn);
+    }
+    .hint .t, .exp .t{font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:800; margin-bottom:4px}
+    .controls{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-top:10px}
+    .status{min-height:1.2em; margin-top:8px; color:var(--muted); font-size:.9rem}
+    .status.ok{color:var(--good)} .status.bad{color:var(--bad)}
+    details{border:1px solid var(--border); border-radius:14px; background:var(--btn); padding:10px}
+    summary{cursor:pointer; color:var(--muted); font-weight:700}
+    .topics{margin-top:10px; display:flex; gap:8px; flex-wrap:wrap}
+    .chip{
+      border:1px solid var(--border); background:var(--btn2); padding:7px 10px; border-radius:999px; cursor:pointer;
+      font-size:.82rem; color:var(--text);
+    }
+    .chip.on{border-color:rgba(99,102,241,.9); box-shadow:0 0 0 2px rgba(99,102,241,.13) inset}
+    .foot{margin-top:10px; display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; color:var(--muted); font-size:.85rem}
+    .mono{font-variant-numeric:tabular-nums}
+  </style>
+</head>
+<body>
+  <div class="wrap" id="root" data-theme="dark">
+    <div class="top">
+      <div class="card" style="flex:1; min-width:320px">
+        <h1>HD kvíz</h1>
+        <div class="sub">learning = hint + vysvetlenie • exam = klikneš odpoveď a ide ďalej</div>
+        <div class="foot">
+          <div class="mono" id="bankInfo">Načítavam databázu…</div>
+          <button class="btn" id="themeBtn" type="button">Téma: dark</button>
+        </div>
+      </div>
+
+      <div class="card settings">
+        <div>
+          <label>Počet otázok v kvíze</label>
+          <input id="count" type="number" min="5" max="80" value="30"/>
+        </div>
+        <div>
+          <label>Mix 2/4 možností</label>
+          <div class="toggle">
+            <div style="font-weight:800">zap.</div>
+            <div class="pill">
+              <button id="mixOn" class="on" type="button">on</button>
+              <button id="mixOff" type="button">off</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label>Repetition (z predošlého kvízu)</label>
+          <select id="repeat">
+            <option value="0">0 %</option>
+            <option value="10">10 %</option>
+            <option value="15" selected>15 %</option>
+            <option value="20">20 %</option>
+            <option value="25">25 %</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Režim</label>
+          <div class="toggle">
+            <div style="font-weight:800" id="modeLabel">learning</div>
+            <div class="pill">
+              <button id="modeLearn" class="on" type="button">learning</button>
+              <button id="modeExam" type="button">exam</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="grid-column:1/-1">
+          <button class="btn primary" id="newQuiz" type="button">Nový kvíz</button>
+        </div>
+
+        <div style="grid-column:1/-1">
+          <details>
+            <summary>Filter tém (default: celý dokument)</summary>
+            <div class="topics" id="topics"></div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px">
+              <button class="btn" id="allTopics" type="button">všetko</button>
+              <button class="btn" id="noTopics" type="button">nič</button>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <div class="card quiz">
+      <div class="bar">
+        <div class="mono" id="counter">Otázka 0 / 0</div>
+        <div class="pwrap"><div class="p" id="prog"></div></div>
+        <div class="mono" id="score">Skóre 0 / 0</div>
+      </div>
+
+      <p class="q" id="qtext"></p>
+      <div class="opts" id="opts"></div>
+
+      <div class="hint" id="hintBox">
+        <div class="t">hint</div>
+        <div id="hintText"></div>
+      </div>
+
+      <div class="exp" id="expBox">
+        <div class="t">vysvetlenie</div>
+        <div id="expText"></div>
+      </div>
+
+      <div class="controls" id="controls">
+        <button class="btn" id="btnNew" type="button">Nový kvíz</button>
+        <button class="btn" id="btnHint" type="button">Hint</button>
+        <button class="btn primary" id="btnCheck" type="button">Skontrolovať</button>
+        <button class="btn" id="btnNext" type="button" disabled>Ďalšia otázka</button>
+      </div>
+
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="foot">
+      <div class="mono" id="poolInfo">Pool: -</div>
+      <div class="mono" id="repeatInfo">Repetition: -</div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const el = (id) => document.getElementById(id);
+
+  const root = el("root");
+  const bankInfo = el("bankInfo");
+  const themeBtn = el("themeBtn");
+
+  const countEl = el("count");
+  const repeatEl = el("repeat");
+
+  const modeLearn = el("modeLearn");
+  const modeExam = el("modeExam");
+  const modeLabel = el("modeLabel");
+
+  const mixOn = el("mixOn");
+  const mixOff = el("mixOff");
+
+  const topicsWrap = el("topics");
+  const allTopicsBtn = el("allTopics");
+  const noTopicsBtn = el("noTopics");
+
+  const newQuizBtn = el("newQuiz");
+  const btnNew = el("btnNew");
+  const btnHint = el("btnHint");
+  const btnCheck = el("btnCheck");
+  const btnNext = el("btnNext");
+
+  const counter = el("counter");
+  const prog = el("prog");
+  const scoreEl = el("score");
+
+  const qtext = el("qtext");
+  const opts = el("opts");
+
+  const hintBox = el("hintBox");
+  const hintText = el("hintText");
+  const expBox = el("expBox");
+  const expText = el("expText");
+  const status = el("status");
+
+  const poolInfo = el("poolInfo");
+  const repeatInfo = el("repeatInfo");
+
+  let BANK = [];
+  let TOPIC_SET = [];
+  let TOPIC_ON = new Set(); // selected topics
+  let MODE = "learning";
+  let MIX = true;
+
+  let quiz = [];
+  let quizMeta = []; // {qIndex, shownOptions, correctShownIndex}
+  let qi = 0;
+  let selected = null;
+  let answered = false;
+  let score = 0;
+
+  const storage = {
+    get(key, defVal){
+      try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : defVal; }catch(e){ return defVal; }
+    },
+    set(key, val){
+      try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){}
+    }
+  };
+
+  const KEY_LASTQUIZ = "hd_lastQuiz";
+
+  const shuffle = (a) => {
+    for (let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  };
+
+  const norm = (s) => (s||"").toLowerCase();
+
+  function detectTopics(q){
+    const t = norm(q.question + " " + (q.hint||"") + " " + (q.explanation||""));
+    const topics = [];
+    const add = (name, re) => { if (re.test(t)) topics.push(name); };
+    add("kolonializmus a zámorie", /(kol[oó]ni|z[aá]morsk|portugal|spaniel|ind(i|ie)|koreni|atlant|otrok|plant[aá]ž|triangl|ben[aá]tk)/);
+    add("merkantilizmus a štát", /(merkantil|col|cla|zollverein|protekcion|saldo|št[aá]t|bismarck|poisten|d[oô]chod)/);
+    add("priemyselná revolúcia", /(priemysel|tov[aá]r|manufakt|textil|parn|uhlie|želez|enclosure|robotn|urbaniz)/);
+    add("USA 19. storočie", /(usa|spojen[ée]\sšt[aá]ty|občiansk|homestead|gilded|west|z[aá]pad|bavln)/);
+    add("krízy a 20. storočie", /(kr[ií]z|1929|new deal|roosevelt|nezamest|depres)/);
+    add("medzinárodný systém", /(zlato|zlat[ýy]\sštandard|menov|infl[aá]c|defl[aá]c|banka|burz|kapit[aá]l)/);
+    if (topics.length===0) topics.push("iné");
+    return topics;
+  }
+
+  function buildTopicIndex(){
+    const all = new Set();
+    BANK.forEach(q => detectTopics(q).forEach(x => all.add(x)));
+    TOPIC_SET = Array.from(all).sort((a,b)=>a.localeCompare(b, "sk"));
+    TOPIC_ON = new Set(TOPIC_SET); // default all
+    renderTopics();
+  }
+
+  function renderTopics(){
+    topicsWrap.innerHTML = "";
+    TOPIC_SET.forEach(t => {
+      const b = document.createElement("button");
+      b.className = "chip " + (TOPIC_ON.has(t) ? "on" : "");
+      b.type = "button";
+      b.textContent = t;
+      b.addEventListener("click", () => {
+        if (TOPIC_ON.has(t)) TOPIC_ON.delete(t); else TOPIC_ON.add(t);
+        b.classList.toggle("on");
+      });
+      topicsWrap.appendChild(b);
+    });
+  }
+
+  function themeToggle(){
+    const cur = root.getAttribute("data-theme") || "dark";
+    const next = cur === "dark" ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    themeBtn.textContent = "Téma: " + next;
+    storage.set("hd_theme", next);
+  }
+
+  function setMode(m){
+    MODE = m;
+    modeLabel.textContent = m;
+    modeLearn.classList.toggle("on", m==="learning");
+    modeExam.classList.toggle("on", m==="exam");
+    // in exam: hide check/next, keep hint optional
+    btnCheck.style.display = m==="learning" ? "" : "none";
+    btnNext.style.display  = m==="learning" ? "" : "none";
+    // in exam: hint still available (user asked ability to skip/hint)
+    storage.set("hd_mode", m);
+  }
+
+  function setMix(on){
+    MIX = on;
+    mixOn.classList.toggle("on", on);
+    mixOff.classList.toggle("on", !on);
+    storage.set("hd_mix", on);
+  }
+
+  function pick2Options(q){
+    // choose 1 distractor closest in length to correct option
+    const corr = q.correctIndex;
+    const corrText = q.options[corr] || "";
+    const candidates = q.options.map((txt,i)=>({i,txt})).filter(x=>x.i!==corr);
+    candidates.sort((a,b)=>Math.abs((a.txt||"").length - corrText.length) - Math.abs((b.txt||"").length - corrText.length));
+    const pick = candidates[0]?.i ?? (corr===0?1:0);
+    const shown = shuffle([corr, pick]);
+    const correctShownIndex = shown.indexOf(corr);
+    return {shown, correctShownIndex};
+  }
+
+  function pick4Options(q){
+    const shown = shuffle([0,1,2,3]);
+    const correctShownIndex = shown.indexOf(q.correctIndex);
+    return {shown, correctShownIndex};
+  }
+
+  function buildPool(){
+    const pool = [];
+    BANK.forEach((q, idx) => {
+      const ts = detectTopics(q);
+      const ok = ts.some(x => TOPIC_ON.has(x));
+      if (ok) pool.push(idx);
+    });
+    return pool;
+  }
+
+  function newQuiz(){
+    if (!BANK.length) return;
+
+    const nRaw = parseInt(countEl.value, 10);
+    const n = Math.max(5, Math.min(isFinite(nRaw)?nRaw:30, 80));
+    countEl.value = n;
+
+    const pool = buildPool();
+    poolInfo.textContent = "Pool: " + pool.length + " otázok";
+
+    const last = storage.get(KEY_LASTQUIZ, []);
+    const repPct = parseInt(repeatEl.value, 10) || 0;
+    let repN = 0;
+    if (repPct > 0 && n >= 20 && last.length){
+      repN = Math.min(last.length, Math.max(5, Math.round(n * (repPct/100))));
+    }
+    repeatInfo.textContent = "Repetition: " + repN + " / " + n;
+
+    // long/short 50/50
+    const long = [], short = [];
+    for (const idx of pool){
+      const L = (BANK[idx].question || "").length;
+      (L >= 150 ? long : short).push(idx);
+    }
+    shuffle(long); shuffle(short);
+
+    const used = new Set();
+    quiz = [];
+    const repPick = repN ? shuffle(last.slice()).slice(0, repN) : [];
+    repPick.forEach(i => { if (pool.includes(i) && !used.has(i)){ used.add(i); quiz.push(i);} });
+
+    // avoid repeating within the same quiz: used set.
+    const targetLong = Math.round((n - quiz.length) * 0.5);
+    let needLong = targetLong, needShort = (n - quiz.length) - targetLong;
+
+    function takeFrom(arr, k){
+      const out = [];
+      while (arr.length && out.length < k){
+        const idx = arr.pop();
+        if (!used.has(idx)){
+          used.add(idx);
+          out.push(idx);
+        }
+      }
+      return out;
+    }
+
+    quiz.push(...takeFrom(long, needLong));
+    quiz.push(...takeFrom(short, needShort));
+
+    // if still short, fill from remaining pool
+    if (quiz.length < n){
+      const rest = shuffle(pool.slice());
+      for (const idx of rest){
+        if (quiz.length >= n) break;
+        if (!used.has(idx)){
+          used.add(idx);
+          quiz.push(idx);
+        }
+      }
+    }
+
+    // final shuffle of question order
+    shuffle(quiz);
+
+    // store for next quiz repetition
+    storage.set(KEY_LASTQUIZ, quiz.slice());
+
+    // build meta per question (shown options, correct mapping)
+    quizMeta = quiz.map(qIndex => {
+      const q = BANK[qIndex];
+      const use2 = MIX ? (Math.random() < 0.5) : false;
+      const pack = use2 ? pick2Options(q) : pick4Options(q);
+      return { qIndex, shownOptions: pack.shown, correctShownIndex: pack.correctShownIndex, use2 };
+    });
+
+    qi = 0;
+    score = 0;
+    selected = null;
+    answered = false;
+
+    render();
+    updateHeader();
+    status.textContent = "";
+    status.className = "status";
+  }
+
+  function updateHeader(){
+    const total = quizMeta.length;
+    const cur = Math.min(qi+1, total);
+    counter.textContent = "Otázka " + cur + " / " + total;
+    prog.style.width = total ? ((cur/total)*100).toFixed(2) + "%" : "0%";
+    scoreEl.textContent = "Skóre " + score + " / " + Math.min(qi, total);
+  }
+
+  function clearBoxes(){
+    hintBox.style.display = "none";
+    expBox.style.display = "none";
+    hintText.textContent = "";
+    expText.textContent = "";
+  }
+
+  function render(){
+    if (!quizMeta.length){
+      qtext.textContent = "Klikni „Nový kvíz“.";
+      opts.innerHTML = "";
+      btnHint.disabled = true;
+      btnCheck.disabled = true;
+      btnNext.disabled = true;
+      return;
+    }
+    const meta = quizMeta[qi];
+    const q = BANK[meta.qIndex];
+
+    qtext.textContent = q.question || "";
+    opts.innerHTML = "";
+    clearBoxes();
+
+    selected = null;
+    answered = false;
+
+    const letters = ["A","B","C","D"];
+    meta.shownOptions.forEach((optIdx, pos) => {
+      const card = document.createElement("div");
+      card.className = "opt";
+      card.dataset.pos = String(pos);
+
+      const L = document.createElement("div");
+      L.className = "L";
+      L.textContent = letters[pos] || "?";
+
+      const T = document.createElement("div");
+      T.textContent = (q.options && q.options[optIdx]) ? q.options[optIdx] : "";
+
+      card.appendChild(L);
+      card.appendChild(T);
+
+      card.addEventListener("click", () => {
+        if (answered) return;
+
+        // exam mode: answer immediately
+        if (MODE === "exam"){
+          selected = pos;
+          grade(true);
+          // small status feedback
+          status.textContent = "odpoveď zaznamenaná";
+          status.className = "status";
+          setTimeout(() => { next(); }, 120);
+          return;
+        }
+
+        selected = pos;
+        Array.from(opts.children).forEach(x => x.classList.remove("sel"));
+        card.classList.add("sel");
+      });
+
+      opts.appendChild(card);
+    });
+
+    btnHint.disabled = false;
+    btnCheck.disabled = (MODE !== "learning");
+    btnNext.disabled = true;
+
+    // in learning: show hint/expl only after check; hint on click
+    // in exam: keep hint available (optional)
+  }
+
+  function showHint(){
+    if (!quizMeta.length) return;
+    const q = BANK[quizMeta[qi].qIndex];
+    hintBox.style.display = "block";
+    hintText.textContent = q.hint || "";
+  }
+
+  function grade(auto=false){
+    if (!quizMeta.length) return;
+    if (MODE === "learning" && selected === null){
+      status.textContent = "vyber odpoveď";
+      status.className = "status bad";
+      return;
+    }
+    const meta = quizMeta[qi];
+    const q = BANK[meta.qIndex];
+
+    answered = true;
+
+    const correct = meta.correctShownIndex;
+    const isOk = (selected === correct);
+
+    Array.from(opts.children).forEach((card, pos) => {
+      card.classList.remove("sel");
+      if (pos === correct) card.classList.add("ok");
+      if (selected === pos && !isOk) card.classList.add("bad");
+    });
+
+    if (isOk) {
+      score++;
+      status.textContent = "správne";
+      status.className = "status ok";
+    } else {
+      status.textContent = "nesprávne";
+      status.className = "status bad";
+    }
+
+    // learning: always show hint + explanation after check
+    if (MODE === "learning"){
+      hintBox.style.display = "block";
+      expBox.style.display = "block";
+      hintText.textContent = q.hint || "";
+      expText.textContent = q.explanation || "";
+      btnNext.disabled = (qi >= quizMeta.length - 1);
+      btnCheck.disabled = true;
+    }
+
+    updateHeader();
+  }
+
+  function next(){
+    if (!quizMeta.length) return;
+    if (qi >= quizMeta.length - 1){
+      // end
+      status.textContent = "koniec kvízu • skóre " + score + " / " + quizMeta.length;
+      status.className = "status";
+      btnNext.disabled = true;
+      return;
+    }
+    qi++;
+    updateHeader();
+    render();
+    status.textContent = "";
+    status.className = "status";
+  }
+
+  // wiring
+  themeBtn.addEventListener("click", themeToggle);
+
+  modeLearn.addEventListener("click", () => setMode("learning"));
+  modeExam.addEventListener("click", () => setMode("exam"));
+
+  mixOn.addEventListener("click", () => setMix(true));
+  mixOff.addEventListener("click", () => setMix(false));
+
+  allTopicsBtn.addEventListener("click", () => { TOPIC_ON = new Set(TOPIC_SET); renderTopics(); });
+  noTopicsBtn.addEventListener("click", () => { TOPIC_ON = new Set(); renderTopics(); });
+
+  newQuizBtn.addEventListener("click", newQuiz);
+  btnNew.addEventListener("click", newQuiz);
+
+  btnHint.addEventListener("click", showHint);
+  btnCheck.addEventListener("click", () => grade(false));
+  btnNext.addEventListener("click", next);
+
+  // init from storage
+  const savedTheme = storage.get("hd_theme", "dark");
+  root.setAttribute("data-theme", savedTheme);
+  themeBtn.textContent = "Téma: " + savedTheme;
+
+  setMode(storage.get("hd_mode", "learning"));
+  setMix(storage.get("hd_mix", true));
+
+  // load bank
+  const url = "questions.json?v=" + Date.now();
+  fetch(url, {cache:"no-store"})
+    .then(r => {
+      if (!r.ok) throw new Error("fetch failed");
+      return r.json();
+    })
+    .then(data => {
+      BANK = Array.isArray(data) ? data : [];
+      bankInfo.textContent = "Databáza: " + BANK.length + " otázok";
+      buildTopicIndex();
+      btnHint.disabled = true;
+      btnCheck.disabled = true;
+      btnNext.disabled = true;
+      poolInfo.textContent = "Pool: " + BANK.length + " otázok";
+    })
+    .catch(() => {
+      bankInfo.textContent = "Chyba: nenašiel sa questions.json (nahraj oba súbory do rovnakého priečinka)";
+    });
+})();
+</script>
+</body>
+</html>
